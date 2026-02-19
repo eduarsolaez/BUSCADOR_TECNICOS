@@ -92,7 +92,7 @@ function renderResults(data) {
     const badge = document.getElementById('levantarBadge');
     const status = data.LEVANTAR_STATUS;
     badge.innerText = status;
-    badge.className = 'badge ' + (status === 'LEVANTAR' ? 'badge-danger' : 'badge-success');
+    badge.className = 'badge ' + (status === 'LEVANTAR' ? 'badge-success' : 'badge-danger');
     // Note: User logic says 'LEVANTAR' should probably be alert/danger or success? 
     // Usually 'LEVANTAR' implies work needed -> Danger/Warning? Or Success (found)?
     // Let's stick to Red for LEVANTAR (Attention needed) and Green for NO LEVANTAR.

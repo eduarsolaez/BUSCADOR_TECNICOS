@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buscador de Técnicos</title>
+    <title>Buscador de Transformadores</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
+
 <body>
 
     <div class="container">
         <div class="search-box">
-            <h1>Buscador de Técnicos</h1>
-            <p>Ingrese Código, Matrícula o Censo</p>
+            <h1>Buscador de Transformadores</h1>
+            <p>Ingrese Código trafo, Matrícula CT, Matrícula trafo o QR</p>
             <div class="input-group">
                 <input type="text" id="searchInput" placeholder="Ej: TR12345..." onkeypress="handleEnter(event)">
                 <button onclick="performSearch()">Buscar</button>
@@ -28,9 +30,9 @@
                 </div>
                 <div class="card-body">
                     <div class="info-row"><strong>Código:</strong> <span id="t_codigo"></span></div>
-                    <div class="info-row"><strong>Matrícula Importada:</strong> <span id="t_matricula_ct"></span></div>
+                    <div class="info-row"><strong>Matrícula CT:</strong> <span id="t_matricula_ct"></span></div>
                     <div class="info-row"><strong>Matrícula Trafo:</strong> <span id="t_matricula_trafo"></span></div>
-                    <div class="info-row"><strong>Censo:</strong> <span id="t_censo"></span></div>
+                    <div class="info-row"><strong>QR:</strong> <span id="t_censo"></span></div>
                     <div class="info-row"><strong>Dirección:</strong> <span id="t_direccion"></span></div>
                     <div class="info-row"><strong>Potencia:</strong> <span id="t_potencia"></span></div>
                     <div class="info-row"><strong>Total Clientes:</strong> <span id="t_total_clientes"></span></div>
@@ -65,4 +67,5 @@
 
     <script src="script.js"></script>
 </body>
+
 </html>
