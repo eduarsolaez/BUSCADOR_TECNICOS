@@ -15,7 +15,7 @@ DETAILS_DIR = os.path.join(API_DIR, 'details')
 INDEX_DIR = os.path.join(API_DIR, 'index')
 
 # Rutas de entrada
-INPUT_DIR = os.path.join(os.path.dirname(BASE_DIR), '')
+INPUT_DIR = BASE_DIR
 FILE_LEVANTAR = os.path.join(INPUT_DIR, 'Levantar.xlsx')
 FILE_TRAFOS = os.path.join(INPUT_DIR, 'Tranformadores.xlsx')
 FILE_CLIENTES = os.path.join(INPUT_DIR, 'Clientes.xlsx')
