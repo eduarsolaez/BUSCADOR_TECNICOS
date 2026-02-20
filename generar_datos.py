@@ -40,18 +40,34 @@ def process_data():
     setup_directories()
 
     print("=== PROCESANDO LEVANTAR.xlsx ===")
+    data_levantar = {}
+    codigos_levantar = set()
     try:
-        # Levantar: Sheet 'BDD', column 'CODIGO_TRAFO'
-        df_levantar = pd.read_excel(FILE_LEVANTAR, sheet_name='BDD', usecols=['CODIGO_TRAFO'])
-        # Clean data
-        codigos_levantar = set(df_levantar['CODIGO_TRAFO'].apply(clean_code).tolist())
-        codigos_levantar.discard("") # Remove empty matches
+        # Levantar: Sheet 'BDD', Columns for missing info fallback
+        cols_levantar = ['CODIGO_TRAFO', 'MATRICULA_CT', 'MATRICULA_TRAFO', 'POTENCIA_NOMINAL_KVA']
+        # Check if columns exist (flexible) - based on diagnosis they do exist
+        df_levantar = pd.read_excel(FILE_LEVANTAR, sheet_name='BDD', usecols=cols_levantar)
+        
+        # Fill NaNs
+        df_levantar = df_levantar.fillna('')
+        
+        for _, row in df_levantar.iterrows():
+            code = clean_code(row['CODIGO_TRAFO'])
+            if code:
+                codigos_levantar.add(code)
+                data_levantar[code] = {
+                    'MATRICULA_CT': clean_code(row['MATRICULA_CT']),
+                    'MATRICULA_TRAFO': clean_code(row['MATRICULA_TRAFO']),
+                    'POTENCIA_NOMINAL_KVA': clean_code(row['POTENCIA_NOMINAL_KVA'])
+                }
+
         print(f"Códigos a levantar cargados: {len(codigos_levantar)}")
     except Exception as e:
         print(f"ERROR leyendo Levantar.xlsx: {e}")
         return
 
     print("=== PROCESANDO TRANFORMADORES.xlsx ===")
+    df_trafos = None
     try:
         df_trafos = pd.read_excel(FILE_TRAFOS, sheet_name='TRANSFORMADOR')
         # Ensure CODIGO_TRANSFORMADOR exists
@@ -103,12 +119,9 @@ def process_data():
     print("=== GENERANDO JSONs ===")
     # Verify client columns exist
     required_client_cols = ['MATRÍCULA CT', 'NIU', 'NIS_RAD_1', 'NIC', 'MEDIDOR', 'DIRECCION_CLIENTE', 'NOMBRE_CLIENTE']
-    # Check if they exist, specific handling for potentially garbled accents
     actual_cols = df_clientes.columns.tolist()
-    # Flexible column matching could be added here if needed
     
     # Group clients
-    # Optimize: Filter only needed columns before grouping
     cols_to_keep = ['CODIGO_TRANSFORMADOR'] + [c for c in required_client_cols if c in actual_cols]
     
     clientes_por_trafo = df_clientes[cols_to_keep].groupby('CODIGO_TRANSFORMADOR').apply(
@@ -116,17 +129,19 @@ def process_data():
     ).to_dict()
 
     search_index = {}
+    processed_codes = set()
     
-    # Process Transformers
-    # Columns to save
+    # Process Transformers from Tranformadores.xlsx
     cols_trafo_save = ['CODIGO_TRANSFORMADOR', 'MATRÍCULA CT', 'MATRÍCULA_TRANSFORMADOR', 'MATRÍCULA_CENSO', 'DIRECCIÓN TRAFO', 'POTENCIA_NOMINAL', 'LEVANTAR_STATUS']
-    # Filter to existing columns
     cols_trafo_save = [c for c in cols_trafo_save if c in df_trafos.columns or c == 'LEVANTAR_STATUS']
 
     count = 0
+    print("  Generando desde Tranformadores.xlsx...")
     for _, row in df_trafos.iterrows():
         cod_trafo = row['CODIGO_TRANSFORMADOR']
         if not cod_trafo: continue
+        
+        processed_codes.add(cod_trafo)
 
         # Prepare data
         data = {col: str(row[col]) if not pd.isna(row[col]) else "" for col in cols_trafo_save}
@@ -141,11 +156,9 @@ def process_data():
             with open(os.path.join(DETAILS_DIR, f"{cod_trafo}.json"), 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False)
         except OSError:
-            # Handle invalid filenames
             pass
 
         # Update Index
-        # Index keys: COIGO, MATRICULA CT, MATRICULA CENSO, MATRICULA TRANFORMADOR
         keys = []
         if 'CODIGO_TRANSFORMADOR' in row: keys.append(row['CODIGO_TRANSFORMADOR'])
         if 'MATRÍCULA CT' in row: keys.append(row['MATRÍCULA CT'])
@@ -158,15 +171,57 @@ def process_data():
                 search_index[k_clean.upper()] = cod_trafo
         
         count += 1
-        if count % 1000 == 0:
-            print(f"  Procesados {count} transformadores...")
+        if count % 5000 == 0:
+            print(f"    Procesados {count}...")
+
+    # Process Missing Transformers from Levantar.xlsx
+    missing_codes = codigos_levantar - processed_codes
+    print(f"  Procesando {len(missing_codes)} transformadores faltantes desde Levantar.xlsx...")
+    
+    for cod_trafo in missing_codes:
+        info = data_levantar.get(cod_trafo, {})
+        clients = clientes_por_trafo.get(cod_trafo, [])
+        
+        # Determine Address from clients if available
+        direccion = ""
+        if clients and len(clients) > 0:
+             # Try to get address from first client
+             direccion = clients[0].get('DIRECCION_CLIENTE', '')
+
+        data = {
+            'CODIGO_TRANSFORMADOR': cod_trafo,
+            'MATRÍCULA CT': info.get('MATRICULA_CT', ''),
+            'MATRÍCULA_TRANSFORMADOR': info.get('MATRICULA_TRAFO', ''),
+            'MATRÍCULA_CENSO': '', # Not in Levantar column
+            'DIRECCIÓN TRAFO': direccion,
+            'POTENCIA_NOMINAL': info.get('POTENCIA_NOMINAL_KVA', ''),
+            'LEVANTAR_STATUS': 'LEVANTAR', # By definition
+            'CLIENTES': clients,
+            'TOTAL_CLIENTES': len(clients)
+        }
+
+        # Write JSON
+        try:
+            with open(os.path.join(DETAILS_DIR, f"{cod_trafo}.json"), 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False)
+        except OSError:
+            pass
+            
+        # Update Index
+        keys = [cod_trafo, info.get('MATRICULA_CT', ''), info.get('MATRICULA_TRAFO', '')]
+        for k in keys:
+            k_clean = clean_code(k)
+            if k_clean:
+                search_index[k_clean.upper()] = cod_trafo
+        
+        count += 1
 
     # Save Index
     with open(os.path.join(INDEX_DIR, "search_index.json"), 'w', encoding='utf-8') as f:
         json.dump(search_index, f, ensure_ascii=False)
 
     print(f"\n--- PROCESO TERMINADO ---")
-    print(f"Total transformadores: {count}")
+    print(f"Total transformadores (incluyendo faltantes): {count}")
     print(f"Entradas en índice: {len(search_index)}")
 
 if __name__ == "__main__":
