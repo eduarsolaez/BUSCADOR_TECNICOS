@@ -146,6 +146,16 @@ def process_data():
         # Prepare data
         data = {col: str(row[col]) if not pd.isna(row[col]) else "" for col in cols_trafo_save}
         
+        # Enrich with Levantar.xlsx data if fields are empty
+        if cod_trafo in codigos_levantar:
+            lev_info = data_levantar.get(cod_trafo, {})
+            if not data.get('MATRÍCULA CT', '').strip():
+                data['MATRÍCULA CT'] = lev_info.get('MATRICULA_CT', '')
+            if not data.get('MATRÍCULA_TRANSFORMADOR', '').strip():
+                data['MATRÍCULA_TRANSFORMADOR'] = lev_info.get('MATRICULA_TRAFO', '')
+            if not data.get('POTENCIA_NOMINAL', '').strip():
+                data['POTENCIA_NOMINAL'] = lev_info.get('POTENCIA_NOMINAL_KVA', '')
+        
         # Add clients
         clients = clientes_por_trafo.get(cod_trafo, [])
         data['CLIENTES'] = clients
