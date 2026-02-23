@@ -96,7 +96,8 @@ function renderResults(data) {
     if (data.LATITUD && data.LONGITUD && String(data.LATITUD).trim() !== '' && String(data.LONGITUD).trim() !== '') {
         const lat = String(data.LATITUD).trim().replace(',', '.');
         const lon = String(data.LONGITUD).trim().replace(',', '.');
-        mapsLink.href = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+        // Usamos Google Search en lugar de /maps/search/ para forzar que abra en el navegador web
+        mapsLink.href = `https://www.google.com/search?q=${lat},${lon}`;
         mapsContainer.style.display = 'block';
     } else {
         mapsContainer.style.display = 'none';
