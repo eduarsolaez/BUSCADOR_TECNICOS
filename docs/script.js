@@ -92,10 +92,10 @@ function renderResults(data) {
     const mapsContainer = document.getElementById('mapsContainer');
     const mapsLink = document.getElementById('t_maps_link');
 
-    // Validar si las coordenadas existen y no están vacías (X = Longitud, Y = Latitud)
-    if (data.COORDENADA_X && data.COORDENADA_Y && data.COORDENADA_X.trim() !== '' && data.COORDENADA_Y.trim() !== '') {
-        const lat = data.COORDENADA_Y.trim();
-        const lon = data.COORDENADA_X.trim();
+    // Validar si las coordenadas existen y no están vacías
+    if (data.LATITUD && data.LONGITUD && String(data.LATITUD).trim() !== '' && String(data.LONGITUD).trim() !== '') {
+        const lat = String(data.LATITUD).trim().replace(',', '.');
+        const lon = String(data.LONGITUD).trim().replace(',', '.');
         mapsLink.href = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
         mapsContainer.style.display = 'block';
     } else {
