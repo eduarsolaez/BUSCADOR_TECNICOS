@@ -96,8 +96,8 @@ function renderResults(data) {
     if (data.LATITUD && data.LONGITUD && String(data.LATITUD).trim() !== '' && String(data.LONGITUD).trim() !== '') {
         const lat = String(data.LATITUD).trim().replace(',', '.');
         const lon = String(data.LONGITUD).trim().replace(',', '.');
-        // Usamos maps.google.com para intentar forzar la apertura en el navegador web
-        mapsLink.href = `https://maps.google.com/maps?q=${lat},${lon}&z=16`;
+        // Usamos el formato /maps/place/ con el pin exacto y forzamos target _blank en el HTML
+        mapsLink.href = `https://www.google.com/maps/place/${lat},${lon}/@${lat},${lon},16z?entry=ttu`;
         mapsContainer.style.display = 'block';
     } else {
         mapsContainer.style.display = 'none';
