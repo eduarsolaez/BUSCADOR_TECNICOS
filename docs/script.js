@@ -86,6 +86,9 @@ function renderResults(data) {
     document.getElementById('t_censo').innerText = data['MATRÍCULA_CENSO'] || '-';
     document.getElementById('t_direccion').innerText = data['DIRECCIÓN TRAFO'] || '-';
     document.getElementById('t_potencia').innerText = data['POTENCIA_NOMINAL'] || '-';
+    document.getElementById('t_modelo').innerText = data['MODELO'] || '-';
+    document.getElementById('t_tipo_ct').innerText = data['TIPO CT'] || '-';
+    document.getElementById('t_tipo_conexion').innerText = data['TIPO CONEXION'] || '-';
     document.getElementById('t_total_clientes').innerText = data['TOTAL_CLIENTES'] || '0';
 
     // Link para Google Maps
