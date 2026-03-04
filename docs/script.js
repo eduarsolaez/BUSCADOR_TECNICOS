@@ -52,10 +52,10 @@ async function performSearch() {
     }
 
     // Si encontramos ID, buscamos el detalle
-    fetchTrafoDetails(trafoId);
+    fetchTrafoDetails(trafoId, query);
 }
 
-async function fetchTrafoDetails(trafoId) {
+async function fetchTrafoDetails(trafoId, query) {
     const statusMsg = document.getElementById('statusMsg');
 
     try {
@@ -67,7 +67,7 @@ async function fetchTrafoDetails(trafoId) {
         }
 
         const data = await response.json();
-        renderResults(data);
+        renderResults(data, query);
         statusMsg.innerText = "";
 
     } catch (error) {
@@ -76,7 +76,7 @@ async function fetchTrafoDetails(trafoId) {
     }
 }
 
-function renderResults(data) {
+function renderResults(data, query) {
     const resultContainer = document.getElementById('resultContainer');
 
     // 1. Renderizar Info Trafo
@@ -105,6 +105,29 @@ function renderResults(data) {
     } else {
         mapsContainer.style.display = 'none';
         mapsLink.href = '#';
+    }
+
+    // Mostrar Cliente Encontrado si aplica
+    const foundClientContainer = document.getElementById('foundClientContainer');
+    let foundClient = null;
+    if (query && data.CLIENTES && data.CLIENTES.length > 0) {
+        foundClient = data.CLIENTES.find(c =>
+            (c.MEDIDOR && String(c.MEDIDOR).trim().toUpperCase() === query) ||
+            (c.NIC && String(c.NIC).trim().toUpperCase() === query)
+        );
+    }
+
+    if (foundClient) {
+        document.getElementById('fc_nombre').innerText = foundClient['NOMBRE_CLIENTE'] || '-';
+        document.getElementById('fc_medidor').innerText = foundClient['MEDIDOR'] || '-';
+        document.getElementById('fc_niu').innerText = foundClient['NIU'] || '-';
+        document.getElementById('fc_direccion').innerText = foundClient['DIRECCION_CLIENTE'] || '-';
+        document.getElementById('fc_matricula_ct').innerText = foundClient['MATRÍCULA CT'] || '-';
+        document.getElementById('fc_nis').innerText = foundClient['NIS_RAD_1'] || '-';
+        document.getElementById('fc_nic').innerText = foundClient['NIC'] || '-';
+        foundClientContainer.style.display = 'block';
+    } else {
+        foundClientContainer.style.display = 'none';
     }
 
     // Badge Levantar
