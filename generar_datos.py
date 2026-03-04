@@ -177,7 +177,11 @@ def process_data():
         if 'MATRÍCULA_CENSO' in row: keys.append(row['MATRÍCULA_CENSO'])
         
         for c in clients:
-            if c.get('MEDIDOR'): keys.append(c['MEDIDOR'])
+            if c.get('MEDIDOR'):
+                keys.append(c['MEDIDOR'])
+                # Add base medidor if it has a hyphen
+                if '-' in c['MEDIDOR']:
+                    keys.append(c['MEDIDOR'].split('-')[0])
             if c.get('NIC'): keys.append(c['NIC'])
         
         for k in keys:
@@ -231,7 +235,11 @@ def process_data():
         keys = [cod_trafo, info.get('MATRICULA_CT', ''), info.get('MATRICULA_TRAFO', '')]
         
         for c in clients:
-            if c.get('MEDIDOR'): keys.append(c['MEDIDOR'])
+            if c.get('MEDIDOR'):
+                keys.append(c['MEDIDOR'])
+                # Add base medidor if it has a hyphen
+                if '-' in c['MEDIDOR']:
+                    keys.append(c['MEDIDOR'].split('-')[0])
             if c.get('NIC'): keys.append(c['NIC'])
             
         for k in keys:

@@ -111,10 +111,13 @@ function renderResults(data, query) {
     const foundClientContainer = document.getElementById('foundClientContainer');
     let foundClient = null;
     if (query && data.CLIENTES && data.CLIENTES.length > 0) {
-        foundClient = data.CLIENTES.find(c =>
-            (c.MEDIDOR && String(c.MEDIDOR).trim().toUpperCase() === query) ||
-            (c.NIC && String(c.NIC).trim().toUpperCase() === query)
-        );
+        foundClient = data.CLIENTES.find(c => {
+            const medidorFull = c.MEDIDOR ? String(c.MEDIDOR).trim().toUpperCase() : '';
+            const medidorBase = medidorFull.includes('-') ? medidorFull.split('-')[0] : medidorFull;
+            const nicStr = c.NIC ? String(c.NIC).trim().toUpperCase() : '';
+
+            return medidorFull === query || medidorBase === query || nicStr === query;
+        });
     }
 
     if (foundClient) {
