@@ -132,8 +132,8 @@ def process_data():
     processed_codes = set()
     
     # Process Transformers from Tranformadores.xlsx
-    cols_trafo_save = ['CODIGO_TRANSFORMADOR', 'MATRÍCULA CT', 'MATRÍCULA_TRANSFORMADOR', 'MATRÍCULA_CENSO', 'DIRECCIÓN TRAFO', 'POTENCIA_NOMINAL', 'LEVANTAR_STATUS', 'LATITUD', 'LONGITUD', 'MODELO', 'TIPO CT', 'TIPO CONEXION']
-    cols_trafo_save = [c for c in cols_trafo_save if c in df_trafos.columns or c in ['LEVANTAR_STATUS', 'LATITUD', 'LONGITUD', 'MODELO', 'TIPO CT', 'TIPO CONEXION']]
+    cols_trafo_save = ['CODIGO_TRANSFORMADOR', 'MATRÍCULA CT', 'MATRÍCULA_TRANSFORMADOR', 'MATRÍCULA_CENSO', 'DIRECCIÓN TRAFO', 'POTENCIA_NOMINAL', 'LEVANTAR_STATUS', 'LATITUD', 'LONGITUD', 'MODELO', 'TIPO CT', 'TIPO CONEXION', 'DEPARTAMENTO TRAFO']
+    cols_trafo_save = [c for c in cols_trafo_save if c in df_trafos.columns or c in ['LEVANTAR_STATUS', 'LATITUD', 'LONGITUD', 'MODELO', 'TIPO CT', 'TIPO CONEXION', 'DEPARTAMENTO TRAFO']]
 
 
     count = 0
@@ -220,6 +220,7 @@ def process_data():
             'MODELO': '',
             'TIPO CT': '',
             'TIPO CONEXION': '',
+            'DEPARTAMENTO TRAFO': '',
             'CLIENTES': clients,
             'TOTAL_CLIENTES': len(clients)
         }
