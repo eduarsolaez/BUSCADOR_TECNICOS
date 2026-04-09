@@ -2,7 +2,9 @@ import pandas as pd
 import json
 import os
 import shutil
+import stat
 import warnings
+import time
 
 # Suppress warnings
 warnings.filterwarnings("ignore")
@@ -13,6 +15,7 @@ DOCS_DIR = os.path.join(BASE_DIR, 'docs')
 API_DIR = os.path.join(DOCS_DIR, 'api')
 DETAILS_DIR = os.path.join(API_DIR, 'details')
 INDEX_DIR = os.path.join(API_DIR, 'index')
+MAP_DIR = os.path.join(API_DIR, 'map')
 
 # Rutas de entrada
 INPUT_DIR = BASE_DIR
@@ -21,10 +24,32 @@ FILE_TRAFOS = os.path.join(INPUT_DIR, 'Tranformadores.xlsx')
 FILE_CLIENTES = os.path.join(INPUT_DIR, 'Clientes.xlsx')
 
 def setup_directories():
+    def remove_readonly(func, path, _):
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+
     if os.path.exists(API_DIR):
-        shutil.rmtree(API_DIR)
+        print(f"Limpiando directorio {API_DIR}...")
+        try:
+            shutil.rmtree(API_DIR, onexc=remove_readonly)
+        except PermissionError:
+            print("AVISO: No se pudo eliminar el directorio completo (posiblemente archivos en uso).")
+            print("Intentando limpiar archivos individuales...")
+            # Fallback: intentar borrar lo que se pueda
+            for root, dirs, files in os.walk(API_DIR, topdown=False):
+                for name in files:
+                    try:
+                        p = os.path.join(root, name)
+                        os.chmod(p, stat.S_IWRITE)
+                        os.remove(p)
+                    except: pass
+                for name in dirs:
+                    try: os.rmdir(os.path.join(root, name))
+                    except: pass
+    
     os.makedirs(DETAILS_DIR, exist_ok=True)
     os.makedirs(INDEX_DIR, exist_ok=True)
+    os.makedirs(MAP_DIR, exist_ok=True)
     print(f"Directorios de salida preparados en {API_DIR}")
 
 def clean_code(val):
@@ -187,7 +212,18 @@ def process_data():
         for k in keys:
             k_clean = clean_code(k)
             if k_clean:
-                search_index[k_clean.upper()] = cod_trafo
+                k_upper = k_clean.upper()
+                if k_upper in search_index:
+                    # Si ya existe, nos aseguramos que sea una lista de IDs únicos
+                    current_val = search_index[k_upper]
+                    if isinstance(current_val, list):
+                        if cod_trafo not in current_val:
+                            current_val.append(cod_trafo)
+                    else:
+                        if current_val != cod_trafo:
+                            search_index[k_upper] = [current_val, cod_trafo]
+                else:
+                    search_index[k_upper] = cod_trafo
         
         count += 1
         if count % 5000 == 0:
@@ -246,13 +282,69 @@ def process_data():
         for k in keys:
             k_clean = clean_code(k)
             if k_clean:
-                search_index[k_clean.upper()] = cod_trafo
+                k_upper = k_clean.upper()
+                if k_upper in search_index:
+                    current_val = search_index[k_upper]
+                    if isinstance(current_val, list):
+                        if cod_trafo not in current_val:
+                            current_val.append(cod_trafo)
+                    else:
+                        if current_val != cod_trafo:
+                            search_index[k_upper] = [current_val, cod_trafo]
+                else:
+                    search_index[k_upper] = cod_trafo
         
         count += 1
 
     # Save Index
     with open(os.path.join(INDEX_DIR, "search_index.json"), 'w', encoding='utf-8') as f:
         json.dump(search_index, f, ensure_ascii=False)
+
+    print("=== GENERANDO ÍNDICE ESPACIAL (MAPA) ===")
+    # Agrupar todos los transformadores con coordenadas en celdas geográficas
+    # Usaremos una precisión de 0.01 grados (~1.1km) para las celdas
+    spatial_index = {} # {(grid_lat, grid_lon): [list of trafos]}
+
+    def get_trafo_map_data(df):
+        for _, row in df.iterrows():
+            lat = row.get('LATITUD')
+            lon = row.get('LONGITUD')
+            if pd.isna(lat) or pd.isna(lon): continue
+            
+            try:
+                lat_f = float(str(lat).replace(',', '.'))
+                lon_f = float(str(lon).replace(',', '.'))
+                
+                # Truncar a 2 decimales para la rejilla
+                grid_lat = round(lat_f, 2)
+                grid_lon = round(lon_f, 2)
+                
+                trafo_data = {
+                    'id': clean_code(row['CODIGO_TRANSFORMADOR']),
+                    'ct': clean_code(row.get('MATRÍCULA CT', '')),
+                    'lat': lat_f,
+                    'lon': lon_f,
+                    'status': 'LEVANTAR' if row['CODIGO_TRANSFORMADOR'] in codigos_levantar else 'NO LEVANTAR'
+                }
+                
+                key = (grid_lat, grid_lon)
+                if key not in spatial_index:
+                    spatial_index[key] = []
+                spatial_index[key].append(trafo_data)
+            except (ValueError, TypeError):
+                continue
+
+    get_trafo_map_data(df_trafos)
+    
+    # También procesar los faltantes de Levantar? 
+    # (Usualmente no tienen coordenadas en Levantar.xlsx, pero por si acaso)
+    # En este script, los faltantes de Levantar no tienen Lat/Lon mapeado.
+
+    print(f"  Guardando {len(spatial_index)} celdas geográficas...")
+    for (glat, glon), trafos in spatial_index.items():
+        filename = f"tile_{glat}_{glon}.json"
+        with open(os.path.join(MAP_DIR, filename), 'w', encoding='utf-8') as f:
+            json.dump(trafos, f, ensure_ascii=False)
 
     print(f"\n--- PROCESO TERMINADO ---")
     print(f"Total transformadores (incluyendo faltantes): {count}")

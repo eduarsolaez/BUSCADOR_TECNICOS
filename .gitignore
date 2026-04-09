@@ -1,10 +1,27 @@
+# Data files
 *.xlsx
+*.xlsb
+*.xls
+nif_index.json
+*.txt
+*.log
+
+# Python
 __pycache__/
 *.pyc
 .env
 .venv/
 venv/
+
+# IDEs
 .idea/
 .vscode/
-*.log
+
+# Project Scripts (Tools to be kept local)
 completar_medidores.py
+completar_nif.py
+generar_datos.py
+debug_excel.py
+debug_specific_code.py
+check_columns.py
+requirements.txt
