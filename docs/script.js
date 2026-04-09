@@ -105,7 +105,7 @@ function renderTrafoResult(data, query) {
     const mapsDisplay = (mapsLat && mapsLon) ? 'block' : 'none';
 
     const status = data.LEVANTAR_STATUS || 'DESCONOCIDO';
-    const badgeClass = status === 'LEVANTAR' ? 'badge-danger' : 'badge-success';
+    const badgeClass = status === 'LEVANTAR' ? 'badge-success' : 'badge-danger';
 
     // Cliente Encontrado logic
     let foundClientHtml = '';
@@ -278,62 +278,89 @@ async function loadNearbyTrafos(targetLat, targetLon, targetId, targetCt) {
     try {
         const results = await Promise.all(promises);
         const allTrafos = results.flat();
+        
+        // Agrupar por ubicación exacta para manejar bancos
+        const groups = {};
 
         allTrafos.forEach(trafo => {
             const dist = calculateDistance(targetLat, targetLon, trafo.lat, trafo.lon);
-            
-            // Solo mostrar si está a menos de 400m (margen extra sobre los 300m pedidos)
             if (dist <= 400) {
-                renderMarker(trafo, targetId, targetCt);
+                const key = `${trafo.lat.toFixed(7)}_${trafo.lon.toFixed(7)}`;
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(trafo);
             }
+        });
+
+        Object.values(groups).forEach(group => {
+            renderMarkerGroup(group, targetId, targetCt);
         });
     } catch (e) {
         console.error("Error cargando índice espacial:", e);
     }
 }
 
-function renderMarker(trafo, targetId, targetCt) {
-    const isTarget = (trafo.id === targetId);
-    const isBank = (trafo.ct && trafo.ct === targetCt && !isTarget);
+function renderMarkerGroup(group, targetId, targetCt) {
+    const hasTarget = group.some(t => t.id === targetId);
+    const hasBank = group.some(t => t.ct && t.ct === targetCt && t.id !== targetId);
     
-    // Determinar color
-    let color = '#6c757d'; // Gris por defecto
+    // El primer trafo define la posición (son la misma en el grupo)
+    const first = group[0];
+    
+    // Determinar color y estilo basado en prioridad: Objetivo > Banco > Normal
+    let color = '#6c757d';
     let weight = 1;
     let radius = 6;
     let zIndex = 100;
 
-    if (isTarget) {
-        color = '#007bff'; // Azul para el objetivo
+    if (hasTarget) {
+        color = '#007bff';
         weight = 3;
         radius = 10;
         zIndex = 1000;
-    } else if (isBank) {
-        color = '#ffc107'; // Amarillo para banco
+    } else if (hasBank) {
+        color = '#ffc107';
         weight = 2;
         radius = 8;
         zIndex = 500;
     }
 
-    const marker = L.circleMarker([trafo.lat, trafo.lon], {
+    const marker = L.circleMarker([first.lat, first.lon], {
         radius: radius,
         fillColor: color,
-        color: isTarget ? '#fff' : color,
+        color: hasTarget ? '#fff' : color,
         weight: weight,
         opacity: 1,
         fillOpacity: 0.8
     }).addTo(map);
 
-    marker.bindPopup(`
-        <strong>Trafo: ${trafo.id}</strong><br>
-        CT: ${trafo.ct}<br>
-        Status: ${trafo.status}<br>
-        <button onclick="closeMap(); document.getElementById('searchInput').value='${trafo.id}'; performSearch();" 
-                style="margin-top:5px; padding:3px 8px; font-size:11px; cursor:pointer;">
-            Ver Detalles
-        </button>
-    `);
+    // Construir contenido del popup con todos los transformadores en ese punto
+    let popupContent = `<div style="max-height: 150px; overflow-y: auto; min-width: 140px;">`;
     
-    if (isTarget) marker.openPopup();
+    group.sort((a, b) => (a.id === targetId ? -1 : 1)).forEach(t => {
+        const isCurrent = t.id === targetId;
+        const style = isCurrent ? 'padding: 5px; border: 1px solid #007bff; background: #e7f3ff; border-radius: 4px; margin-bottom: 5px;' : 'margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 5px;';
+        
+        // Si tiene CT, buscar por CT para que aparezca el banco completo. Si no, por ID.
+        const searchVal = t.ct ? t.ct : t.id;
+        const btnText = t.ct ? 'Ver Banco' : 'Ver Detalles';
+
+        popupContent += `
+            <div style="${style}">
+                <strong>Trafo: ${t.id}</strong><br>
+                CT: ${t.ct || '-'}<br>
+                Status: ${t.status}<br>
+                <button onclick="closeMap(); document.getElementById('searchInput').value='${searchVal}'; performSearch();" 
+                        style="margin-top:5px; padding:3px 8px; font-size:11px; cursor:pointer; background: #34a853; color: white; border: none; border-radius: 3px;">
+                    ${btnText}
+                </button>
+            </div>
+        `;
+    });
+    
+    popupContent += `</div>`;
+
+    marker.bindPopup(popupContent);
+    if (hasTarget) marker.openPopup();
 
     markers.push(marker);
 }
