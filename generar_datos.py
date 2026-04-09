@@ -342,7 +342,7 @@ def process_data():
 
     print(f"  Guardando {len(spatial_index)} celdas geográficas...")
     for (glat, glon), trafos in spatial_index.items():
-        filename = f"tile_{glat}_{glon}.json"
+        filename = f"tile_{glat:.2f}_{glon:.2f}.json"
         with open(os.path.join(MAP_DIR, filename), 'w', encoding='utf-8') as f:
             json.dump(trafos, f, ensure_ascii=False)
 
