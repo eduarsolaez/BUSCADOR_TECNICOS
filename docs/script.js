@@ -47,7 +47,7 @@ async function performSearch() {
         if (!searchIndex) return;
     }
 
-    const searchResult = searchIndex[query];
+    let searchResult = searchIndex[query];
 
     if (!searchResult) {
         statusMsg.innerText = "No se encontraron resultados para: " + query;
@@ -55,10 +55,36 @@ async function performSearch() {
     }
 
     // Convertir a array si es un ID único
-    const trafoIds = Array.isArray(searchResult) ? searchResult : [searchResult];
+    let trafoIds = Array.isArray(searchResult) ? searchResult : [searchResult];
     
+    // --- NUEVA LÓGICA: Auto-detección de Banco ---
+    // Si buscamos por algo que NO es la CT, intentamos ver si ese trafo pertenece a un banco
+    try {
+        const firstId = trafoIds[0];
+        const response = await fetch(`api/details/${firstId}.json`);
+        if (response.ok) {
+            const detail = await response.json();
+            const ct = detail['MATRÍCULA CT'] ? String(detail['MATRÍCULA CT']).trim().toUpperCase() : null;
+            
+            // Si tiene CT y hay más trafos en ese CT, expandimos trafoIds
+            if (ct && searchIndex[ct]) {
+                const bankIds = Array.isArray(searchIndex[ct]) ? searchIndex[ct] : [searchIndex[ct]];
+                if (bankIds.length > 1) {
+                    trafoIds = bankIds;
+                }
+            }
+        }
+    } catch (e) {
+        console.warn("No se pudo verificar el banco automáticamente:", e);
+    }
+    // --------------------------------------------
+
     // Mostrar alerta de banco si hay más de uno
     if (trafoIds.length > 1) {
+        bankAlert.innerHTML = `
+            <div style="margin-bottom: 8px;"><strong>Banco de Transformadores Detectado</strong> (${trafoIds.length} unidades)</div>
+            <div id="bankNav" class="bank-nav"></div>
+        `;
         bankAlert.style.display = 'block';
     }
 
@@ -97,6 +123,17 @@ function renderTrafoResult(data, query) {
     // Crear bloque de resultado
     const resultBlock = document.createElement('div');
     resultBlock.className = 'result-block';
+    resultBlock.id = `result-${data.CODIGO_TRANSFORMADOR}`;
+
+    // Si es parte de un banco, añadir botón a la navegación
+    const bankNav = document.getElementById('bankNav');
+    if (bankNav) {
+        const navBtn = document.createElement('button');
+        navBtn.className = 'nav-dot-btn';
+        navBtn.innerText = data.CODIGO_TRANSFORMADOR;
+        navBtn.onclick = () => document.getElementById(resultBlock.id).scrollIntoView({ behavior: 'smooth', block: 'start' });
+        bankNav.appendChild(navBtn);
+    }
 
     // 1. Info Trafo
     const mapsLat = data.LATITUD && String(data.LATITUD).trim() !== '' ? String(data.LATITUD).trim().replace(',', '.') : null;

@@ -170,13 +170,39 @@ tr:hover {
     background-color: #fff3cd;
     color: #856404;
     border: 1px solid #ffeeba;
-    padding: 10px;
+    padding: 15px;
     border-radius: 4px;
     margin-top: 15px;
     font-weight: bold;
     text-align: center;
     font-size: 16px;
     border-left: 5px solid #ffc107;
+}
+
+.bank-nav {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.nav-dot-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    background-color: #ffc107;
+    color: #856404;
+    border: 1px solid #d39e00;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+
+.nav-dot-btn:hover {
+    background-color: #e0a800;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 /* Separator for multiple result blocks */
